@@ -8,78 +8,60 @@ from volkanic.default import desktop_open
 from joker.xopen import utils
 
 
-def netcat(host, port, content):
-    # https://stackoverflow.com/a/1909355/2925169
-    import socket
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.connect((host, port))
-        sock.sendall(content)
-        sock.shutdown(socket.SHUT_WR)
-        return sock.recv(2 ** 16)
-    except Exception:
-        return b''
-    finally:
-        sock.close()
+class Client(object):
+    def __init__(self, port=None):
+        self.port = port or utils.get_port()
 
+    def chksvr(self):
+        return self.request(b'#version').startswith(b'joker-xopen')
 
-def check_server():
-    try:
-        resp = netcat('127.0.0.1', utils.get_port_num(), b'#version')
-    except Exception:
-        return False
-    return resp.startswith(b'joker-xopen')
+    def request(self, content):
+        if isinstance(content, str):
+            content = content.encode('utf-8')
+        return utils.netcat('127.0.0.1', self.port, content)
 
+    @staticmethod
+    def sanitize(s, sep='.'):
+        return sep.join(s.split())[:64]
 
-def _rejoin(s, sep='.'):
-    return sep.join(s.split())[:64]
+    @staticmethod
+    def get_api_url(target):
+        prefix = 'https://a.geekinv.com/s/api/'
+        return prefix + Client.sanitize(target)
 
+    @staticmethod
+    def desktop_open_url(url):
+        if re.match(r'https?://', url):
+            try:
+                desktop_open(url)
+            except Exception:
+                pass
 
-def get_api_url(target):
-    prefix = 'https://a.geekinv.com/s/api/'
-    return prefix + _rejoin(target)
+    @classmethod
+    def _aopen_wapi(cls, qs):
+        import requests
+        api_url = cls.get_api_url(qs)
+        url = requests.get(api_url).text
+        cls.desktop_open_url(url)
 
+    def _aopen(self, qs):
+        resp = self.request(qs)
+        if resp:
+            return desktop_open(resp.decode('latin1'))
+        api_url = self.get_api_url(qs)
+        line = '#request ' + api_url
+        url = self.request(line).decode('latin1')
+        self.desktop_open_url(url)
 
-def _openurl(url):
-    if not re.match(r'https?://', url):
-        return
-    try:
-        desktop_open(url)
-    except Exception as e:
-        from joker.cast.syntax import printerr
-        printerr(e)
-
-
-def _aopen(qs):
-    import requests
-    api_url = get_api_url(qs)
-    url = requests.get(api_url).text
-    _openurl(url)
-
-
-def _aopen_proxied(qs):
-    port = utils.get_port_num()
-    resp = netcat('127.0.0.1', port, _rejoin(qs).encode('utf-8'))
-    if resp:
-        return desktop_open(resp.decode('latin1'))
-    api_url = get_api_url(qs)
-    line = ('#request ' + api_url).encode('latin1')
-    url = netcat('127.0.0.1', port, line).decode('latin1')
-    _openurl(url)
-
-
-def aopen(*targets):
-    if not targets:
-        return
-    if check_server():
-        func = _aopen_proxied
-    else:
-        func = _aopen
-    if len(targets) == 1:
-        return func(targets[0])
-    from concurrent.futures import ThreadPoolExecutor
-    pool = ThreadPoolExecutor(max_workers=4)
-    return pool.map(func, targets)
+    def aopen(self, *targets):
+        if not targets:
+            return
+        f = self._aopen if self.chksvr() else self._aopen_wapi
+        if len(targets) == 1:
+            return f(targets[0])
+        from concurrent.futures import ThreadPoolExecutor
+        pool = ThreadPoolExecutor(max_workers=4)
+        return pool.map(f, targets)
 
 
 def xopen(*targets):
@@ -95,19 +77,22 @@ def xopen(*targets):
         elif re.match(r'[\w._-]{1,64}$', t):
             indirect_locators.add(t)
     desktop_open(*direct_locators)
-    aopen(*indirect_locators)
+    Client().aopen(*indirect_locators)
 
 
 def runxopen(prog=None, args=None):
     import sys
     if not prog and sys.argv[0].endswith('__main__.py'):
         prog = 'python3 -m joker.xopen'
-    desc = 'xopen'
+    desc = 'joker-xopen client'
     pr = argparse.ArgumentParser(prog=prog, description=desc)
     aa = pr.add_argument
     aa('-d', '--direct', action='store_true', help='open all locators directly')
+    aa('-u', '--update', action='store_true', help='request server to update from tabfile')
     aa('locator', nargs='*', help='URLs or filenames')
     ns = pr.parse_args(args)
     if ns.direct:
         return desktop_open(*ns.locator)
+    if ns.update:
+        return Client().request(b'#update')
     xopen(*ns.locator)

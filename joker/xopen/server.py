@@ -38,23 +38,23 @@ def get_tabfile_path():
         return path
 
 
-class AbbrmapServer(CacheServer):
+class XopenCacheServer(CacheServer):
     def __init__(self, sizelimit, path):
-        super(AbbrmapServer, self).__init__()
+        super(XopenCacheServer, self).__init__()
         self.data = ActiveTab(sizelimit, path)
         self.cached_commands = {b'#request'}
         self.commands = {
             b'#reload': self.cmd_reload,
             b'#update': self.cmd_update,
             b'#request': self.cmd_request,
-            b'#version': self.cmd_version,
+            b'#chksvr': self.cmd_version,
         }
         self._tpexec = ThreadPoolExecutor(max_workers=3)
 
     def lookup(self, key, val):
         if key in self.commands:
             return self._lookup_with_command(key, val)
-        return super(AbbrmapServer, self).lookup(key, val)
+        return super(XopenCacheServer, self).lookup(key, val)
 
     def _lookup_with_command(self, key, val):
         keyval = None
@@ -109,19 +109,19 @@ def run(prog, args):
     import sys
     if not prog and sys.argv[0].endswith('server.py'):
         prog = 'python3 -m joker.xopen.server'
-    desc = 'xopen server'
+    desc = 'joker-xopen cache server'
     pr = argparse.ArgumentParser(prog=prog, description=desc)
     aa = pr.add_argument
     aa('-s', '--size', type=int, default=ActiveTab.default_sizelimit)
     aa('-t', '--tabfile', help='path to a 2-column tabular text file')
     ns = pr.parse_args(args)
     try:
-        svr = AbbrmapServer(ns.size, ns.tabfile or get_tabfile_path())
+        svr = XopenCacheServer(ns.size, ns.tabfile or get_tabfile_path())
     except Exception as e:
         printerr(e)
         sys.exit(1)
     threading.Thread(target=svr.eviction, daemon=True).start()
-    svr.runserver('127.0.0.1', utils.get_port_num())
+    svr.runserver('127.0.0.1', utils.get_port())
 
 
 if __name__ == '__main__':
