@@ -5,14 +5,7 @@ import os
 import re
 
 from volkanic.default import desktop_open
-
-
-def get_port_num():
-    envvar = 'JOKER_XOPEN_PORT'
-    try:
-        return int(os.environ.get(envvar))
-    except TypeError:
-        return 18831
+from joker.xopen import utils
 
 
 def netcat(host, port, content):
@@ -32,7 +25,7 @@ def netcat(host, port, content):
 
 def check_server():
     try:
-        resp = netcat('127.0.0.1', get_port_num(), b'#version')
+        resp = netcat('127.0.0.1', utils.get_port_num(), b'#version')
     except Exception:
         return False
     return resp.startswith(b'joker-xopen')

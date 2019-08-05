@@ -12,6 +12,8 @@ import requests
 from joker.cast.syntax import printerr
 from joker.minions.cache import CacheServer, ActiveTab
 
+from joker.xopen import utils
+
 
 def _printerr(*args, **kwargs):
     parts = []
@@ -103,14 +105,6 @@ class AbbrmapServer(CacheServer):
             self.data.evict()
 
 
-def get_port_num():
-    envvar = 'JOKER_XOPEN_PORT'
-    try:
-        return int(os.environ.get(envvar))
-    except TypeError:
-        return 18831
-
-
 def run(prog, args):
     import sys
     if not prog and sys.argv[0].endswith('server.py'):
@@ -127,7 +121,7 @@ def run(prog, args):
         printerr(e)
         sys.exit(1)
     threading.Thread(target=svr.eviction, daemon=True).start()
-    svr.runserver('127.0.0.1', get_port_num())
+    svr.runserver('127.0.0.1', utils.get_port_num())
 
 
 if __name__ == '__main__':
