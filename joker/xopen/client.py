@@ -31,9 +31,13 @@ def check_server():
     return resp.startswith(b'joker-xopen')
 
 
+def _rejoin(s, sep='.'):
+    return sep.join(s.split())[:64]
+
+
 def get_api_url(target):
     prefix = 'https://a.geekinv.com/s/api/'
-    return prefix + '.'.join(target.split())[:64]
+    return prefix + _rejoin(target)
 
 
 def _openurl(url):
@@ -46,17 +50,21 @@ def _openurl(url):
         printerr(e)
 
 
-def _aopen_query_uncached(qs):
+def _aopen(qs):
     import requests
     api_url = get_api_url(qs)
     url = requests.get(api_url).text
     _openurl(url)
 
 
-def _aopen_query_cached(qs):
+def _aopen_proxied(qs):
+    port = utils.get_port_num()
+    resp = netcat('127.0.0.1', port, _rejoin(qs).encode('utf-8'))
+    if resp:
+        return desktop_open(resp.decode('latin1'))
     api_url = get_api_url(qs)
     line = ('#request ' + api_url).encode('latin1')
-    url = netcat('127.0.0.1', get_port_num(), line).decode('latin1')
+    url = netcat('127.0.0.1', port, line).decode('latin1')
     _openurl(url)
 
 
@@ -64,9 +72,9 @@ def aopen(*targets):
     if not targets:
         return
     if check_server():
-        func = _aopen_query_cached
+        func = _aopen_proxied
     else:
-        func = _aopen_query_uncached
+        func = _aopen
     if len(targets) == 1:
         return func(targets[0])
     from concurrent.futures import ThreadPoolExecutor

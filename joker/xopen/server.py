@@ -34,7 +34,7 @@ def under_joker_xopen_dir(*paths):
 def get_tabfile_path():
     from joker.default import make_joker_dir
     path = os.path.join(make_joker_dir('xopen'), 'xopen.txt')
-    with open(path, 'w'):
+    with open(path, 'a'):
         return path
 
 
