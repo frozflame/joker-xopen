@@ -1,0 +1,4 @@
+include requirements.txt
+exclude joker-xopen/test_joker_xopen/*
+recursive-include joker/xopen/templates *.html
+
