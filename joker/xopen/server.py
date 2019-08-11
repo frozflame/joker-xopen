@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from joker.cast.syntax import printerr
-from joker.minions.cache import CacheServer, ActiveTab
+from joker.minions.cache import CacheServer, WarmConf
 
 from joker.xopen import utils
 
@@ -41,13 +41,13 @@ def get_tabfile_path():
 class XopenCacheServer(CacheServer):
     def __init__(self, sizelimit, path):
         super(XopenCacheServer, self).__init__()
-        self.data = ActiveTab(sizelimit, path)
+        self.data = WarmConf(sizelimit, path)
         self.cached_commands = {b'#request'}
         self.commands = {
             b'#reload': self.cmd_reload,
             b'#update': self.cmd_update,
             b'#request': self.cmd_request,
-            b'#chksvr': self.cmd_version,
+            b'#version': self.cmd_version,
         }
         self._tpexec = ThreadPoolExecutor(max_workers=3)
 
@@ -112,7 +112,7 @@ def run(prog, args):
     desc = 'joker-xopen cache server'
     pr = argparse.ArgumentParser(prog=prog, description=desc)
     aa = pr.add_argument
-    aa('-s', '--size', type=int, default=ActiveTab.default_sizelimit)
+    aa('-s', '--size', type=int, default=WarmConf.default_sizelimit)
     aa('-t', '--tabfile', help='path to a 2-column tabular text file')
     ns = pr.parse_args(args)
     try:
