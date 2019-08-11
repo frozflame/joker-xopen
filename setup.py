@@ -11,7 +11,6 @@ from setuptools import setup, find_packages
 
 _nsp = 'joker'
 _pkg = 'xopen'
-_desc = ''
 _names = [_nsp, _pkg]
 _names = [s for s in _names if s]
 
@@ -42,11 +41,11 @@ def version_find():
 config = {
     'name': '-'.join(_names),
     'version': version_find(),
-    'description': '' + _desc,
-    'keywords': '',
-    'url': 'example.com',
-    'author': 'anonym',
-    'author_email': 'anonym@example.com',
+    'description': 'Open files and URLs in desktop environments conveniently',
+    'keywords': 'desktop open xdg-open start',
+    'url': 'https://github.com/frozflame/joker-xopen',
+    'author': 'frozflame',
+    'author_email': 'frozflame@outlook.com',
     'license': "GNU General Public License (GPL)",
     'packages': find_packages(exclude=['test_*']),
     'zip_safe': False,
@@ -69,7 +68,4 @@ config = {
 if _nsp:
     config['namespace_packages'] = [_nsp]
 
-
 setup(**config)
-
-
