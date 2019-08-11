@@ -1,7 +1,7 @@
 joker-xopen
 ===========
 
-### `xopen` command
+### `xopen` command (client)
 
 Without any config, you can use `xopen` as a cross-platform version `xdg-open` (Linux), `open` (macOS) and 
 `start` (Windows).
@@ -13,14 +13,16 @@ Show help
 
     $ xopen -h
     
-    
+
+-----------------------------------------------------------
+ 
 ### Server
 
 Show help
 
     $ python3 -m joker.xopen.server -h
     
-Put a text file at `/.joker/xopen/xopen.txt`, with content like
+Put a text file at `~/.joker/xopen/xopen.txt`, with content like
 
     c   ~/Code
     w   /var/www/html
