@@ -13,12 +13,12 @@ class Client(object):
         self.port = port or utils.get_port()
 
     def chksvr(self):
-        return self.request(b'#version').startswith(b'joker-xopen')
+        return self.request(b'version').startswith(b'joker-xopen')
 
-    def request(self, content):
-        if isinstance(content, str):
-            content = content.encode('utf-8')
-        return utils.netcat('127.0.0.1', self.port, content)
+    def request(self, line):
+        if isinstance(line, str):
+            line = line.encode('utf-8')
+        return utils.netcat('127.0.0.1', self.port, line)
 
     @staticmethod
     def sanitize(s, sep='.'):
@@ -49,7 +49,7 @@ class Client(object):
         if resp:
             return desktop_open(resp.decode('latin1'))
         api_url = self.get_api_url(qs)
-        line = '#request ' + api_url
+        line = 'http-get ' + api_url
         url = self.request(line).decode('latin1')
         self.desktop_open_url(url)
 
@@ -64,7 +64,7 @@ class Client(object):
         return pool.map(f, targets)
 
 
-def xopen(*targets):
+def _xopen(*targets):
     if not targets:
         return desktop_open('.')
     direct_locators = set()
@@ -80,6 +80,13 @@ def xopen(*targets):
     Client().aopen(*indirect_locators)
 
 
+def _get_and_print(*keys):
+    client = Client()
+    for k in keys:
+        v = client.request('get {}'.format(k)).decode()
+        print(v)
+
+
 def runxopen(prog=None, args=None):
     import sys
     if not prog and sys.argv[0].endswith('__main__.py'):
@@ -87,17 +94,17 @@ def runxopen(prog=None, args=None):
     desc = 'joker-xopen client'
     pr = argparse.ArgumentParser(prog=prog, description=desc)
     aa = pr.add_argument
+    aa('-g', '--get', action='store_true', help='get value from cache server')
     aa('-d', '--direct', action='store_true', help='open all locators directly')
     aa('-u', '--update', action='store_true', help='request server to update from tabfile')
-    aa('--get', nargs='?', help='get value from cache server')
-    aa('locator', nargs='*', help='URLs or filenames')
+    aa('locators', metavar='locator',
+       nargs='*', help='keys, URLs or filenames')
     ns = pr.parse_args(args)
-    if ns.direct:
-        return desktop_open(*ns.locator)
     if ns.update:
-        return Client().request(b'#update').decode() or None
-    if ns.get is not None:
-        key = '_'.join(ns.get.split()).encode()
-        print(Client().request(key).decode())
-        return
-    xopen(*ns.locator)
+        # TODO: print msg
+        Client().request(b'update')
+    if ns.direct:
+        return desktop_open(*ns.locators)
+    if ns.get:
+        return _get_and_print(*ns.locators)
+    _xopen(*ns.locators)
