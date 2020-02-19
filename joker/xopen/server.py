@@ -40,38 +40,39 @@ def get_tabfile_path():
 
 class XopenCacheServer(CacheServer):
     def __init__(self, sizelimit, path):
-        super(XopenCacheServer, self).__init__()
+        CacheServer.__init__(self)
         self.data = WarmConf(sizelimit, path)
-        self.cached_commands = {b'#request'}
-        self.commands = {
-            b'#reload': self.cmd_reload,
-            b'#update': self.cmd_update,
-            b'#request': self.cmd_request,
-            b'#version': self.cmd_version,
+        self.cached_verbs = {b'http-get'}
+        self.verbs = {
+            b'reload': self.exec_reload,
+            b'update': self.exec_update,
+            b'version': self.exec_version,
+            b'http-get': self.exec_http_get,
         }
         self._tpexec = ThreadPoolExecutor(max_workers=3)
 
-    def lookup(self, key, val):
-        if key in self.commands:
-            return self._lookup_with_command(key, val)
-        return super(XopenCacheServer, self).lookup(key, val)
-
-    def _lookup_with_command(self, key, val):
-        keyval = None
-        if key in self.cached_commands:
-            keyval = key + b'.' + val
-            try:
-                return self.data[keyval]
-            except Exception:
-                pass
+    def _execute(self, verb, payload):
         try:
-            rv = self.commands[key](val)
+            return self.verbs[verb](payload)
         except Exception:
             traceback.print_exc()
-            rv = self.val_none
-        if key in self.cached_commands and rv:
-            self.data[keyval] = rv
+
+    def _execute_with_cache(self, verb, payload):
+        key = verb + b'.' + playload
+        try:
+            return self.data[key]
+        except Exception:
+            pass
+        rv = self._execute(verb, payload)
+        self.data[key] = rv
         return rv
+
+    def execute(self, verb, payload):
+        if verb in self.cached_verbs:
+            return self._execute_with_cache(verb, payload)
+        if verb in self.verbs:
+            return self._execute(verb, payload)
+        return CacheServer.execute(self, verb, payload)
 
     def _printdiff(self, vdata):
         udata = self.data.data
@@ -84,18 +85,18 @@ class XopenCacheServer(CacheServer):
                 _printerr(k, u, v)
 
     @staticmethod
-    def cmd_request(url):
+    def exec_http_get(url):
         return requests.get(url).content
 
     @staticmethod
-    def cmd_version(_):
+    def exec_version(_):
         import joker.xopen
         return 'joker-xopen==' + joker.xopen.__version__
 
-    def cmd_reload(self, _):
+    def exec_reload(self, _):
         self._tpexec.submit(self.data.reload)
 
-    def cmd_update(self, _):
+    def exec_update(self, _):
         self._tpexec.submit(self.data.update)
 
     def eviction(self, period=5):
