@@ -89,10 +89,15 @@ def runxopen(prog=None, args=None):
     aa = pr.add_argument
     aa('-d', '--direct', action='store_true', help='open all locators directly')
     aa('-u', '--update', action='store_true', help='request server to update from tabfile')
+    aa('--get', nargs='?', help='get value from cache server')
     aa('locator', nargs='*', help='URLs or filenames')
     ns = pr.parse_args(args)
     if ns.direct:
         return desktop_open(*ns.locator)
     if ns.update:
-        return Client().request(b'#update')
+        return Client().request(b'#update').decode() or None
+    if ns.get is not None:
+        key = '_'.join(ns.get.split()).encode()
+        print(Client().request(key).decode())
+        return
     xopen(*ns.locator)
