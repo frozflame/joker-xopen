@@ -58,7 +58,7 @@ class XopenCacheServer(CacheServer):
             traceback.print_exc()
 
     def _execute_with_cache(self, verb, payload):
-        key = verb + b'.' + playload
+        key = verb + b'.' + payload
         try:
             return self.data[key]
         except Exception:
