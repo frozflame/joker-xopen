@@ -3,6 +3,7 @@
 import argparse
 import os
 import re
+import sys
 
 from volkanic.default import desktop_open
 from joker.xopen import utils
@@ -87,8 +88,12 @@ def _get_and_print(*keys):
         print(v)
 
 
+def _update():
+    Client().request(b'update')
+    print("xopen client: 'update' request sent", file=sys.stderr)
+
+
 def runxopen(prog=None, args=None):
-    import sys
     if not prog and sys.argv[0].endswith('__main__.py'):
         prog = 'python3 -m joker.xopen'
     desc = 'joker-xopen client'
@@ -101,8 +106,9 @@ def runxopen(prog=None, args=None):
        nargs='*', help='keys, URLs or filenames')
     ns = pr.parse_args(args)
     if ns.update:
-        # TODO: print msg
-        Client().request(b'update')
+        _update()
+        if not ns.locators:
+            return
     if ns.direct:
         return desktop_open(*ns.locators)
     if ns.get:
