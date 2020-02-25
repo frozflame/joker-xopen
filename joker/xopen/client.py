@@ -14,83 +14,65 @@ class Client(object):
         self.port = port or utils.get_port()
 
     def chksvr(self):
-        return self.request(b'version').startswith(b'joker-xopen')
+        return self.request('version').startswith(b'joker-xopen')
 
-    def request(self, line):
-        if isinstance(line, str):
-            line = line.encode('utf-8')
-        return utils.netcat('127.0.0.1', self.port, line)
+    def request(self, qs):
+        if isinstance(qs, str):
+            qs = qs.encode('utf-8')
+        elif isinstance(qs, bytes):
+            pass
+        else:
+            qs = str(qs).encode('utf-8')
+        return utils.netcat('127.0.0.1', self.port, qs)
 
-    @staticmethod
-    def sanitize(s, sep='.'):
-        return sep.join(s.split())[:64]
+    def get(self, key):
+        return self.request('get ' + key)
 
-    @staticmethod
-    def get_api_url(target):
-        prefix = 'https://a.geekinv.com/s/api/'
-        return prefix + Client.sanitize(target)
+    def open(self, key):
+        location = self.get(key)
+        if location:
+            return desktop_open(location.decode('latin1'))
 
-    @staticmethod
-    def desktop_open_url(url):
-        if re.match(r'https?://', url):
-            try:
-                desktop_open(url)
-            except Exception:
-                pass
-
-    @classmethod
-    def _aopen_wapi(cls, qs):
-        import requests
-        api_url = cls.get_api_url(qs)
-        url = requests.get(api_url).text
-        cls.desktop_open_url(url)
-
-    def _aopen(self, qs):
-        resp = self.request(qs)
-        if resp:
-            return desktop_open(resp.decode('latin1'))
-        api_url = self.get_api_url(qs)
-        line = 'http-get ' + api_url
-        url = self.request(line).decode('latin1')
-        self.desktop_open_url(url)
-
-    def aopen(self, *targets):
-        if not targets:
+    def open_many(self, *keys):
+        if not keys:
             return
-        f = self._aopen if self.chksvr() else self._aopen_wapi
-        if len(targets) == 1:
-            return f(targets[0])
+        if not self.chksvr():
+            return
+        if len(keys) == 1:
+            return self.open(keys[0])
+
         from concurrent.futures import ThreadPoolExecutor
         pool = ThreadPoolExecutor(max_workers=4)
-        return pool.map(f, targets)
+        return pool.map(self.open, keys)
 
 
-def _xopen(*targets):
-    if not targets:
+def amphib_open(*locators):
+    if not locators:
         return desktop_open('.')
     direct_locators = set()
     indirect_locators = set()
     exists = os.path.exists
 
-    for t in targets:
-        if exists(t) or re.match(r'(https?|file|ftp)://', t):
-            direct_locators.add(t)
-        elif re.match(r'[\w._-]{1,64}$', t):
-            indirect_locators.add(t)
+    for loc in locators:
+        if exists(loc) or re.match(r'(https?|file|ftp)://', loc):
+            direct_locators.add(loc)
+        elif re.match(r'[\w.:_-]{1,64}$', loc):
+            indirect_locators.add(loc)
     desktop_open(*direct_locators)
-    Client().aopen(*indirect_locators)
+    Client().open_many(*indirect_locators)
 
 
-def _get_and_print(*keys):
+def get_and_print(*keys):
     client = Client()
     for k in keys:
-        v = client.request('get {}'.format(k)).decode()
+        v = client.get(k)
         print(v)
 
 
-def _update():
-    Client().request(b'update')
-    print("xopen client: 'update' request sent", file=sys.stderr)
+def request_and_printerr(qs):
+    Client().request(qs)
+    msg = "xopen client: '{}' request sent".format(qs)
+    print(msg, file=sys.stderr)
 
 
 def runxopen(prog=None, args=None):
@@ -98,19 +80,32 @@ def runxopen(prog=None, args=None):
         prog = 'python3 -m joker.xopen'
     desc = 'joker-xopen client'
     pr = argparse.ArgumentParser(prog=prog, description=desc)
-    aa = pr.add_argument
-    aa('-g', '--get', action='store_true', help='get value from cache server')
-    aa('-d', '--direct', action='store_true', help='open all locators directly')
-    aa('-u', '--update', action='store_true', help='request server to update from tabfile')
-    aa('locators', metavar='locator',
-       nargs='*', help='keys, URLs or filenames')
+    add = pr.add_argument
+
+    add('-g', '--get', action='store_true',
+        help='get value from cache server')
+
+    add('-r', '--reload', action='store_true',
+        help='request server to reload from conf')
+
+    add('-u', '--update', action='store_true',
+        help='request server to update from conf')
+
+    add('locators', metavar='locator', nargs='*',
+        help='key (in conf), pathname or url')
+
     ns = pr.parse_args(args)
+
+    default_locators = ['.']
+    if ns.reload:
+        request_and_printerr('reload')
+        default_locators = []
+
     if ns.update:
-        _update()
-        if not ns.locators:
-            return
-    if ns.direct:
-        return desktop_open(*ns.locators)
+        request_and_printerr('update')
+        default_locators = []
+
+    locators = ns.locators or default_locators
     if ns.get:
-        return _get_and_print(*ns.locators)
-    _xopen(*ns.locators)
+        return get_and_print(*ns.locators)
+    amphib_open(*locators)
