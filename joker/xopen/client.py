@@ -54,9 +54,14 @@ def amphib_open(*locators):
     exists = os.path.exists
 
     for loc in locators:
+        if loc.startswith('~'):
+            path = os.path.expanduser(loc)
+            if os.path.exists(path):
+                direct_locators.add(path)
+                continue
         if exists(loc) or re.match(r'(https?|file|ftp)://', loc):
             direct_locators.add(loc)
-        elif re.match(r'[\w.:_-]{1,64}$', loc):
+        elif re.match(r'\S{1,64}$', loc):
             indirect_locators.add(loc)
     desktop_open(*direct_locators)
     Client().open_many(*indirect_locators)
