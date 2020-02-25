@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from joker.cast.syntax import printerr
-from joker.minions.cache import CacheServer, WarmConf
+from joker.minions.cache import CacheServer, SizedDict, WarmConf
 
 from joker.xopen import utils
 
@@ -31,7 +31,7 @@ def under_joker_xopen_dir(*paths):
     return under_joker_dir('xopen', *paths)
 
 
-def get_tabfile_path():
+def get_conf_path():
     from joker.default import make_joker_dir
     path = os.path.join(make_joker_dir('xopen'), 'xopen.txt')
     with open(path, 'a'):
@@ -41,7 +41,8 @@ def get_tabfile_path():
 class XopenCacheServer(CacheServer):
     def __init__(self, sizelimit, path):
         CacheServer.__init__(self)
-        self.data = WarmConf(sizelimit, path)
+        self.warmconf = WarmConf(sizelimit, path)
+        self.cache = SizedDict(sizelimit)
         self.cached_verbs = {b'http-get'}
         self.verbs = {
             b'reload': self.exec_reload,
@@ -58,13 +59,13 @@ class XopenCacheServer(CacheServer):
             traceback.print_exc()
 
     def _execute_with_cache(self, verb, payload):
-        key = verb + b'.' + payload
+        key = verb + b':' + payload
         try:
-            return self.data[key]
+            return self.cache[key]
         except Exception:
             pass
         rv = self._execute(verb, payload)
-        self.data[key] = rv
+        self.cache[key] = rv
         return rv
 
     def execute(self, verb, payload):
@@ -75,7 +76,7 @@ class XopenCacheServer(CacheServer):
         return CacheServer.execute(self, verb, payload)
 
     def _printdiff(self, vdata):
-        udata = self.data.data
+        udata = self.warmconf.data
         keys = set(vdata)
         keys.update(udata)
         for k in keys:
@@ -94,16 +95,17 @@ class XopenCacheServer(CacheServer):
         return 'joker-xopen==' + joker.xopen.__version__
 
     def exec_reload(self, _):
-        self._tpexec.submit(self.data.reload)
+        self._tpexec.submit(self.warmconf.reload)
 
     def exec_update(self, _):
-        self._tpexec.submit(self.data.update)
+        self._tpexec.submit(self.warmconf.update)
 
     def eviction(self, period=5):
         import time
         while True:
             time.sleep(period)
-            self.data.evict()
+            self.cache.evict()
+            self.warmconf.evict()
 
 
 def run(prog, args):
@@ -112,12 +114,18 @@ def run(prog, args):
         prog = 'python3 -m joker.xopen.server'
     desc = 'joker-xopen cache server'
     pr = argparse.ArgumentParser(prog=prog, description=desc)
-    aa = pr.add_argument
-    aa('-s', '--size', type=int, default=WarmConf.default_sizelimit)
-    aa('-t', '--tabfile', help='path to a 2-column tabular text file')
+    add = pr.add_argument
+
+    add('-c', '--conf', metavar='path',
+        help='path to conf, default `~/.joker/xopen/xopen.txt`')
+
+    add('-s', '--size', metavar='integer',
+        type=int, default=WarmConf.default_sizelimit)
+
     ns = pr.parse_args(args)
+
     try:
-        svr = XopenCacheServer(ns.size, ns.tabfile or get_tabfile_path())
+        svr = XopenCacheServer(ns.size, ns.conf or get_conf_path())
     except Exception as e:
         printerr(e)
         sys.exit(1)
