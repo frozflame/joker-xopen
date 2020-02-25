@@ -26,12 +26,12 @@ class Client(object):
         return utils.netcat('127.0.0.1', self.port, qs)
 
     def get(self, key):
-        return self.request('get ' + key)
+        return self.request('get ' + key).decode()
 
     def open(self, key):
         location = self.get(key)
         if location:
-            return desktop_open(location.decode('latin1'))
+            return desktop_open(location)
 
     def open_many(self, *keys):
         if not keys:
@@ -48,7 +48,7 @@ class Client(object):
 
 def amphib_open(*locators):
     if not locators:
-        return desktop_open('.')
+        return
     direct_locators = set()
     indirect_locators = set()
     exists = os.path.exists

@@ -41,7 +41,7 @@ def get_conf_path():
 class XopenCacheServer(CacheServer):
     def __init__(self, sizelimit, path):
         CacheServer.__init__(self)
-        self.warmconf = WarmConf(sizelimit, path)
+        self.data = WarmConf(sizelimit, path)
         self.cache = SizedDict(sizelimit)
         self.cached_verbs = {b'http-get'}
         self.verbs = {
@@ -76,7 +76,7 @@ class XopenCacheServer(CacheServer):
         return CacheServer.execute(self, verb, payload)
 
     def _printdiff(self, vdata):
-        udata = self.warmconf.data
+        udata = self.data.data
         keys = set(vdata)
         keys.update(udata)
         for k in keys:
@@ -95,17 +95,17 @@ class XopenCacheServer(CacheServer):
         return 'joker-xopen==' + joker.xopen.__version__
 
     def exec_reload(self, _):
-        self._tpexec.submit(self.warmconf.reload)
+        self._tpexec.submit(self.data.reload)
 
     def exec_update(self, _):
-        self._tpexec.submit(self.warmconf.update)
+        self._tpexec.submit(self.data.update)
 
     def eviction(self, period=5):
         import time
         while True:
             time.sleep(period)
             self.cache.evict()
-            self.warmconf.evict()
+            self.data.evict()
 
 
 def run(prog, args):
