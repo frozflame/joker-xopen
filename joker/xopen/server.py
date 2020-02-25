@@ -38,10 +38,18 @@ def get_conf_path():
         return path
 
 
+class _WarmConf(WarmConf):
+    @classmethod
+    def parse(cls, path):
+        data = WarmConf.parse(path)
+        f = os.path.expanduser
+        return {k: f(v) for k, v in data.items()}
+
+
 class XopenCacheServer(CacheServer):
     def __init__(self, sizelimit, path):
         CacheServer.__init__(self)
-        self.data = WarmConf(sizelimit, path)
+        self.data = _WarmConf(sizelimit, path)
         self.cache = SizedDict(sizelimit)
         self.cached_verbs = {b'http-get'}
         self.verbs = {

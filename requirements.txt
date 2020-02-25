@@ -2,4 +2,4 @@ volkanic
 requests
 joker
 joker-cast
-joker-minions>=0.1
+joker-minions>=0.1.2
