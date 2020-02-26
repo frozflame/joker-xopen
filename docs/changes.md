@@ -1,6 +1,10 @@
 Changes of `joker-xopen`
 ------------------------
 
+### 0.4
+* support multile source files 
+* datatypes moved from joker.minions  
+
 ### 0.3
 * client: add -r/-reload, remove -d/--direct
 * server: -t/--tabfile => -c/--conf 
