@@ -10,7 +10,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from joker.cast.syntax import printerr
-from joker.minions.cache import CacheServer, SizedDict, WarmConf
+from joker.minions.cache import CacheServer
+from joker.xopen.datatypes import LimitedDict, ReconfDict
 
 from joker.xopen import utils
 
@@ -31,26 +32,31 @@ def under_joker_xopen_dir(*paths):
     return under_joker_dir('xopen', *paths)
 
 
-def get_conf_path():
+def get_default_source_paths():
+    import glob
     from joker.default import make_joker_dir
-    path = os.path.join(make_joker_dir('xopen'), 'xopen.txt')
-    with open(path, 'a'):
-        return path
+    xopen_dirpath = make_joker_dir('xopen')
+    path = os.path.join(xopen_dirpath, 'xopen.txt')
+    if not os.path.exists(path):
+        with open(path, 'a'):
+            pass
+    patt = os.path.join(xopen_dirpath, '*.txt')
+    return glob.glob(patt)
 
 
-class _WarmConf(WarmConf):
+class _ReconfDict(ReconfDict):
     @classmethod
     def parse(cls, path):
-        data = WarmConf.parse(path)
+        data = ReconfDict.parse(path)
         f = os.path.expanduser
         return {k: f(v) for k, v in data.items()}
 
 
 class XopenCacheServer(CacheServer):
-    def __init__(self, sizelimit, path):
+    def __init__(self, capacity, *paths):
         CacheServer.__init__(self)
-        self.data = _WarmConf(sizelimit, path)
-        self.cache = SizedDict(sizelimit)
+        self.data = _ReconfDict(capacity, *paths)
+        self.cache = LimitedDict(capacity, )
         self.cached_verbs = {b'http-get'}
         self.verbs = {
             b'reload': self.exec_reload,
@@ -124,16 +130,17 @@ def run(prog, args):
     pr = argparse.ArgumentParser(prog=prog, description=desc)
     add = pr.add_argument
 
-    add('-c', '--conf', metavar='path',
-        help='path to conf, default `~/.joker/xopen/xopen.txt`')
+    add('-c', '--capacity', metavar='int',
+        type=int, default=ReconfDict.default_capacity)
 
-    add('-s', '--size', metavar='integer',
-        type=int, default=WarmConf.default_sizelimit)
+    add('sources', metavar='path', nargs='*',
+        help='path to a source file, default `~/.joker/xopen/*.txt`')
 
     ns = pr.parse_args(args)
+    sources = ns.sources or get_default_source_paths()
 
     try:
-        svr = XopenCacheServer(ns.size, ns.conf or get_conf_path())
+        svr = XopenCacheServer(ns.capacity, *sources)
     except Exception as e:
         printerr(e)
         sys.exit(1)
