@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # coding: utf-8
+
 import argparse
 import os
 import re
 import sys
+from volkanic.utils import desktop_open
 
-from volkanic.default import desktop_open
 from joker.xopen import utils
 
 
