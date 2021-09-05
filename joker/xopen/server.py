@@ -141,8 +141,8 @@ def run(prog, args):
 
     try:
         svr = XopenCacheServer(ns.capacity, *sources)
-    except Exception as e:
-        printerr(e)
+    except Exception:
+        traceback.print_exc()
         sys.exit(1)
     threading.Thread(target=svr.eviction, daemon=True).start()
     svr.runserver('127.0.0.1', utils.get_port())
