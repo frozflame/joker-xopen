@@ -1,5 +1,5 @@
-volkanic
+joker-cast~=0.5.1
+joker-minions~=0.2
+joker~=0.3.2
 requests
-joker
-joker-cast
-joker-minions>=0.1.2
+volkanic~=0.4.1

@@ -11,9 +11,12 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 from joker.cast.syntax import printerr
 from joker.minions.cache import CacheServer
-from joker.xopen.datatypes import LimitedDict, ReconfDict
 
 from joker.xopen import utils
+from joker.xopen.datatypes import LimitedDict, ReconfDict
+from joker.xopen.environ import JokerInterface
+
+ji = JokerInterface()
 
 
 def _printerr(*args, **kwargs):
@@ -28,14 +31,13 @@ def _printerr(*args, **kwargs):
 
 
 def under_joker_xopen_dir(*paths):
-    from joker.default import under_joker_dir
-    return under_joker_dir('xopen', *paths)
+    return ji.under_joker_subdir(*paths)
+
 
 
 def get_default_source_paths():
     import glob
-    from joker.default import make_joker_dir
-    xopen_dirpath = make_joker_dir('xopen')
+    xopen_dirpath = ji.under_joker_subdir(mkdirs=True)
     path = os.path.join(xopen_dirpath, 'xopen.txt')
     if not os.path.exists(path):
         with open(path, 'a'):
