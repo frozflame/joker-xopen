@@ -4,7 +4,7 @@
 import os
 import re
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 # CAUTION:
 # Do NOT import your package from your setup.py
@@ -47,7 +47,7 @@ config = {
     'author': 'frozflame',
     'author_email': 'frozflame@outlook.com',
     'license': "GNU General Public License (GPL)",
-    'packages': find_packages(exclude=['test_*']),
+    'packages': find_namespace_packages(include=['joker.*']),
     'zip_safe': False,
     'install_requires': read("requirements.txt"),
     'entry_points': {'console_scripts': ['xopen=joker.xopen.client:runxopen']},
@@ -58,6 +58,11 @@ config = {
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     # ensure copy static file to runtime directory
     'include_package_data': True,

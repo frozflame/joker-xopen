@@ -34,7 +34,6 @@ def under_joker_xopen_dir(*paths):
     return ji.under_joker_subdir(*paths)
 
 
-
 def get_default_source_paths():
     import glob
     xopen_dirpath = ji.under_joker_subdir(mkdirs=True)
@@ -78,7 +77,7 @@ class XopenCacheServer(CacheServer):
         key = verb + b':' + payload
         try:
             return self.cache[key]
-        except Exception:
+        except KeyError:
             pass
         rv = self._execute(verb, payload)
         self.cache[key] = rv
@@ -141,6 +140,7 @@ def run(prog, args):
     ns = pr.parse_args(args)
     sources = ns.sources or get_default_source_paths()
 
+    # noinspection PyBroadException
     try:
         svr = XopenCacheServer(ns.capacity, *sources)
     except Exception:
